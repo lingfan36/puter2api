@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+*.exe
+puter2api
+
+# Database files
+*.db
+*.db-journal
+
+# Documentation
+*.md
+LICENSE
+
+# CI/CD
+.gitlab-ci.yml
+.github
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
