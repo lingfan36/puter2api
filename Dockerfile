@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=$BUILDPLATFORM golang:1.21-alpine AS builder
+FROM  golang:1.21-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache gcc musl-dev
@@ -13,12 +13,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build arguments for cross-compilation
-ARG TARGETOS
-ARG TARGETARCH
-
-# Build the application
-RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o puter2api .
+# Build the application (CGO required for sqlite3)
+RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o puter2api .
 
 # Runtime stage
 FROM alpine:latest
