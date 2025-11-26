@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Token 表示存储的 Puter 认证 Token
 type Token struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`       // 用户自定义名称
-	Token     string    `json:"token"`      // JWT Token
-	IsActive  bool      `json:"is_active"` // 是否启用
-	IsValid   bool      `json:"is_valid"`  // 是否有效（测试通过）
+	ID        int64      `json:"id"`
+	Name      string     `json:"name"`      // 用户自定义名称
+	Token     string     `json:"token"`     // JWT Token
+	IsActive  bool       `json:"is_active"` // 是否启用
+	IsValid   bool       `json:"is_valid"`  // 是否有效（测试通过）
 	LastUsed  *time.Time `json:"last_used,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 // Storage 数据库存储接口
@@ -27,7 +27,7 @@ type Storage struct {
 
 // New 创建新的存储实例
 func New(dbPath string) (*Storage, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}

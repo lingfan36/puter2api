@@ -1,9 +1,6 @@
 # Build stage
 FROM  golang:1.21-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache gcc musl-dev
-
 WORKDIR /app
 
 # Copy go mod files
@@ -13,8 +10,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application (CGO required for sqlite3)
-RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o puter2api .
+# Build the application (pure Go, no CGO needed)
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o puter2api .
 
 # Runtime stage
 FROM alpine:latest
