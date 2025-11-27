@@ -197,33 +197,31 @@ func (h *Handler) sendOpenAIStreamResponse(c *gin.Context, model string, text st
 	}
 	h.writeSSEChunk(c, firstChunk)
 
-	// 发送文本内容（逐字符）
+	// 发送文本内容（一次性发送）
 	if text != "" {
-		for _, r := range text {
-			charStr := string(r)
-			chunk := types.OpenAIResponse{
-				ID:      msgID,
-				Object:  "chat.completion.chunk",
-				Created: created,
-				Model:   model,
-				Choices: []types.OpenAIChoice{
-					{
-						Index: 0,
-						Delta: &types.OpenAIResponseMsg{
-							Content: &charStr,
-						},
-						FinishReason: nil,
-						Logprobs:     nil,
+		chunk := types.OpenAIResponse{
+			ID:      msgID,
+			Object:  "chat.completion.chunk",
+			Created: created,
+			Model:   model,
+			Choices: []types.OpenAIChoice{
+				{
+					Index: 0,
+					Delta: &types.OpenAIResponseMsg{
+						Content: &text,
 					},
+					FinishReason: nil,
+					Logprobs:     nil,
 				},
-			}
-			h.writeSSEChunk(c, chunk)
+			},
 		}
+		h.writeSSEChunk(c, chunk)
 	}
 
 	// 发送工具调用
 	if len(toolCalls) > 0 {
 		for i, tc := range toolCalls {
+			idx := i
 			// 发送工具调用开始
 			toolCallChunk := types.OpenAIResponse{
 				ID:      msgID,
@@ -236,8 +234,9 @@ func (h *Handler) sendOpenAIStreamResponse(c *gin.Context, model string, text st
 						Delta: &types.OpenAIResponseMsg{
 							ToolCalls: []types.OpenAIToolCall{
 								{
-									ID:   tc.ID,
-									Type: "function",
+									Index: &idx,
+									ID:    tc.ID,
+									Type:  "function",
 									Function: types.OpenAIToolCallFunction{
 										Name:      tc.Name,
 										Arguments: "",
@@ -252,37 +251,32 @@ func (h *Handler) sendOpenAIStreamResponse(c *gin.Context, model string, text st
 			}
 			h.writeSSEChunk(c, toolCallChunk)
 
-			// 逐字符发送参数
+			// 一次性发送参数
 			argsStr := string(tc.Input)
-			for _, r := range argsStr {
-				argChunk := types.OpenAIResponse{
-					ID:      msgID,
-					Object:  "chat.completion.chunk",
-					Created: created,
-					Model:   model,
-					Choices: []types.OpenAIChoice{
-						{
-							Index: 0,
-							Delta: &types.OpenAIResponseMsg{
-								ToolCalls: []types.OpenAIToolCall{
-									{
-										ID:   "",
-										Type: "",
-										Function: types.OpenAIToolCallFunction{
-											Name:      "",
-											Arguments: string(r),
-										},
+			argChunk := types.OpenAIResponse{
+				ID:      msgID,
+				Object:  "chat.completion.chunk",
+				Created: created,
+				Model:   model,
+				Choices: []types.OpenAIChoice{
+					{
+						Index: 0,
+						Delta: &types.OpenAIResponseMsg{
+							ToolCalls: []types.OpenAIToolCall{
+								{
+									Index: &idx,
+									Function: types.OpenAIToolCallFunction{
+										Arguments: argsStr,
 									},
 								},
 							},
-							FinishReason: nil,
-							Logprobs:     nil,
 						},
+						FinishReason: nil,
+						Logprobs:     nil,
 					},
-				}
-				h.writeSSEChunk(c, argChunk)
+				},
 			}
-			_ = i // 避免未使用变量警告
+			h.writeSSEChunk(c, argChunk)
 		}
 	}
 

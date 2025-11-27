@@ -22,7 +22,6 @@ vendor/
 
 # IDE
 .idea/
-.vscode/
 *.swp
 *.swo
 *~

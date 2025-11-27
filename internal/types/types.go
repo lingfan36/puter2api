@@ -160,18 +160,18 @@ type PuterStreamChunk struct {
 
 // OpenAIRequest OpenAI Chat Completion 请求
 type OpenAIRequest struct {
-	Model            string            `json:"model"`
-	Messages         []OpenAIMessage   `json:"messages"`
-	MaxTokens        int               `json:"max_tokens,omitempty"`
-	Temperature      float64           `json:"temperature,omitempty"`
-	TopP             float64           `json:"top_p,omitempty"`
-	N                int               `json:"n,omitempty"`
-	Stream           bool              `json:"stream,omitempty"`
-	Stop             json.RawMessage   `json:"stop,omitempty"`
-	PresencePenalty  float64           `json:"presence_penalty,omitempty"`
-	FrequencyPenalty float64           `json:"frequency_penalty,omitempty"`
-	Tools            []OpenAITool      `json:"tools,omitempty"`
-	ToolChoice       json.RawMessage   `json:"tool_choice,omitempty"`
+	Model            string          `json:"model"`
+	Messages         []OpenAIMessage `json:"messages"`
+	MaxTokens        int             `json:"max_tokens,omitempty"`
+	Temperature      float64         `json:"temperature,omitempty"`
+	TopP             float64         `json:"top_p,omitempty"`
+	N                int             `json:"n,omitempty"`
+	Stream           bool            `json:"stream,omitempty"`
+	Stop             json.RawMessage `json:"stop,omitempty"`
+	PresencePenalty  float64         `json:"presence_penalty,omitempty"`
+	FrequencyPenalty float64         `json:"frequency_penalty,omitempty"`
+	Tools            []OpenAITool    `json:"tools,omitempty"`
+	ToolChoice       json.RawMessage `json:"tool_choice,omitempty"`
 }
 
 // OpenAIMessage OpenAI 消息
@@ -198,8 +198,9 @@ type OpenAIToolFunction struct {
 
 // OpenAIToolCall OpenAI 工具调用
 type OpenAIToolCall struct {
-	ID       string                 `json:"id"`
-	Type     string                 `json:"type"`
+	Index    *int                   `json:"index,omitempty"`
+	ID       string                 `json:"id,omitempty"`
+	Type     string                 `json:"type,omitempty"`
 	Function OpenAIToolCallFunction `json:"function"`
 }
 
@@ -222,11 +223,11 @@ type OpenAIResponse struct {
 
 // OpenAIChoice OpenAI 选择
 type OpenAIChoice struct {
-	Index        int                   `json:"index"`
-	Message      *OpenAIResponseMsg    `json:"message,omitempty"`
-	Delta        *OpenAIResponseMsg    `json:"delta,omitempty"`
-	FinishReason *string               `json:"finish_reason"`
-	Logprobs     *interface{}          `json:"logprobs"`
+	Index        int                `json:"index"`
+	Message      *OpenAIResponseMsg `json:"message,omitempty"`
+	Delta        *OpenAIResponseMsg `json:"delta,omitempty"`
+	FinishReason *string            `json:"finish_reason"`
+	Logprobs     *interface{}       `json:"logprobs"`
 }
 
 // OpenAIResponseMsg OpenAI 响应消息

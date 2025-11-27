@@ -24,12 +24,16 @@ func ParseToolCalls(text string) ([]types.ParsedToolCall, string) {
 			if call.ID == "" {
 				call.ID = fmt.Sprintf("toolu_%d_%d", time.Now().UnixNano(), i)
 			}
+			// 确保 Input 不为空
+			if len(call.Input) == 0 {
+				call.Input = json.RawMessage("{}")
+			}
 			calls = append(calls, call)
-			remainingText = strings.Replace(remainingText, match[0], "", 1)
 		}
+		// 无论解析成功与否，都移除 tool_call 标签
+		remainingText = strings.Replace(remainingText, match[0], "", 1)
 	}
 
 	remainingText = strings.TrimSpace(remainingText)
 	return calls, remainingText
 }
-

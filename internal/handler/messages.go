@@ -94,10 +94,10 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 	toolCalls, remainingText := claude.ParseToolCalls(responseText)
 
 	// 发送 SSE 响应
-	h.sendSSEResponse(c, req.Stream, remainingText, toolCalls, len(responseText))
+	h.sendSSEResponse(c, remainingText, toolCalls, len(responseText))
 }
 
-func (h *Handler) sendSSEResponse(c *gin.Context, stream bool, text string, toolCalls []types.ParsedToolCall, totalLen int) {
+func (h *Handler) sendSSEResponse(c *gin.Context, text string, toolCalls []types.ParsedToolCall, totalLen int) {
 	msgID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
 	sse := claude.NewSSEWriter(c)
 
@@ -109,17 +109,9 @@ func (h *Handler) sendSSEResponse(c *gin.Context, stream bool, text string, tool
 	// 2. 发送文本块 (即使为空也要发送，否则 Claude Code 会报错)
 	if text != "" || len(toolCalls) == 0 {
 		sse.SendTextBlockStart(blockIndex)
-
 		if text != "" {
-			if stream {
-				for _, r := range text {
-					sse.SendTextDelta(blockIndex, string(r))
-				}
-			} else {
-				sse.SendTextDelta(blockIndex, text)
-			}
+			sse.SendTextDelta(blockIndex, text)
 		}
-
 		sse.SendBlockStop(blockIndex)
 		blockIndex++
 	}
@@ -127,16 +119,7 @@ func (h *Handler) sendSSEResponse(c *gin.Context, stream bool, text string, tool
 	// 3. 发送工具调用块
 	for _, call := range toolCalls {
 		sse.SendToolUseBlockStart(blockIndex, call.ID, call.Name)
-
-		inputStr := string(call.Input)
-		if stream {
-			for _, r := range inputStr {
-				sse.SendInputJSONDelta(blockIndex, string(r))
-			}
-		} else {
-			sse.SendInputJSONDelta(blockIndex, inputStr)
-		}
-
+		sse.SendInputJSONDelta(blockIndex, string(call.Input))
 		sse.SendBlockStop(blockIndex)
 		blockIndex++
 	}

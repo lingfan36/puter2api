@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -65,6 +66,12 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	// 检查 HTTP 状态码
+	if resp.StatusCode != 200 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("puter API error: status=%d, body=%s", resp.StatusCode, string(bodyBytes))
+	}
 
 	// 收集完整响应
 	var fullText strings.Builder
