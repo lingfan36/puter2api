@@ -5,27 +5,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"puter2api/internal/claude"
 	"puter2api/internal/types"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 // HandleOpenAIChat 处理 /v1/chat/completions 请求 (OpenAI 兼容接口)
 func (h *Handler) HandleOpenAIChat(c *gin.Context) {
+	startTime := time.Now()
+
 	// 读取原始请求体用于调试
 	bodyBytes, _ := c.GetRawData()
-	log.Printf("[OpenAI] 原始请求体: %s", string(bodyBytes))
 
 	// 重新设置请求体以便后续解析
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var req types.OpenAIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[OpenAI] JSON 解析失败: %v", err)
+		log.Error().Str("api", "OpenAI").Err(err).Msg("JSON 解析失败")
 		c.JSON(400, gin.H{
 			"error": gin.H{
 				"message": err.Error(),
@@ -37,12 +38,20 @@ func (h *Handler) HandleOpenAIChat(c *gin.Context) {
 	}
 
 	hasTools := len(req.Tools) > 0
-	log.Printf("[OpenAI] 请求: model=%s, stream=%v, messages=%d, hasTools=%v", req.Model, req.Stream, len(req.Messages), hasTools)
+	lastMsgLen := len(req.Messages[len(req.Messages)-1].Content)
+	log.Info().
+		Str("api", "OpenAI").
+		Str("model", req.Model).
+		Bool("stream", req.Stream).
+		Int("messages", len(req.Messages)).
+		Bool("hasTools", hasTools).
+		Int("last_msg_len", lastMsgLen).
+		Msg("收到请求")
 
 	// 从数据库获取可用的 Token
 	tokenRecord, err := h.store.GetActiveToken()
 	if err != nil {
-		log.Printf("[OpenAI] 获取 Token 失败: %v", err)
+		log.Error().Str("api", "OpenAI").Err(err).Msg("获取 Token 失败")
 		c.JSON(500, gin.H{
 			"error": gin.H{
 				"message": "failed to get token",
@@ -64,7 +73,7 @@ func (h *Handler) HandleOpenAIChat(c *gin.Context) {
 	}
 
 	token := tokenRecord.Token
-	log.Printf("[OpenAI] 使用 Token: %s (ID: %d)", tokenRecord.Name, tokenRecord.ID)
+	log.Debug().Str("api", "OpenAI").Str("token", tokenRecord.Name).Int64("id", tokenRecord.ID).Msg("使用 Token")
 
 	// 更新 Token 使用时间
 	h.store.UpdateTokenUsed(tokenRecord.ID)
@@ -76,7 +85,7 @@ func (h *Handler) HandleOpenAIChat(c *gin.Context) {
 	// 调用 Puter API
 	responseText, err := h.puterClient.Call(puterMessages, token)
 	if err != nil {
-		log.Printf("[OpenAI] 调用 Puter API 失败: %v", err)
+		log.Error().Str("api", "OpenAI").Err(err).Msg("调用 Puter API 失败")
 		c.JSON(500, gin.H{
 			"error": gin.H{
 				"message": err.Error(),
@@ -96,6 +105,14 @@ func (h *Handler) HandleOpenAIChat(c *gin.Context) {
 	} else {
 		h.sendOpenAINonStreamResponse(c, req.Model, remainingText, toolCalls)
 	}
+
+	// 记录完成日志
+	elapsed := time.Since(startTime).Seconds()
+	log.Info().
+		Str("api", "OpenAI").
+		Str("耗时", fmt.Sprintf("%.2fs", elapsed)).
+		Int("响应长度", len(responseText)).
+		Msg("请求完成")
 }
 
 // convertOpenAIMessages 转换 OpenAI 消息格式为内部格式

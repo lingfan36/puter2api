@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"puter2api/internal/claude"
@@ -13,6 +12,7 @@ import (
 	"puter2api/internal/types"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 // Handler HTTP 处理器
@@ -31,16 +31,17 @@ func NewHandler(store *storage.Storage) *Handler {
 
 // HandleMessages 处理 /v1/messages 请求
 func (h *Handler) HandleMessages(c *gin.Context) {
-	// 读取原始请求体用于调试
+	startTime := time.Now()
+
+	// 读取原始请求体
 	bodyBytes, _ := c.GetRawData()
-	log.Printf("原始请求体: %s", string(bodyBytes))
 
 	// 重新设置请求体以便后续解析
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var req types.ClaudeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("JSON 解析失败: %v", err)
+		log.Error().Str("api", "Claude").Err(err).Msg("JSON 解析失败")
 		c.JSON(400, gin.H{
 			"type":  "error",
 			"error": gin.H{"type": "invalid_request_error", "message": err.Error()},
@@ -49,12 +50,19 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 	}
 
 	hasTools := len(req.Tools) > 0
-	log.Printf("请求: stream=%v, messages=%d, hasTools=%v", req.Stream, len(req.Messages), hasTools)
+	lastMsgLen := len(req.Messages[len(req.Messages)-1].Content)
+	log.Info().
+		Str("api", "Claude").
+		Bool("stream", req.Stream).
+		Int("messages", len(req.Messages)).
+		Bool("hasTools", hasTools).
+		Int("last_msg_len", lastMsgLen).
+		Msg("收到请求")
 
 	// 从数据库获取可用的 Token
 	tokenRecord, err := h.store.GetActiveToken()
 	if err != nil {
-		log.Printf("获取 Token 失败: %v", err)
+		log.Error().Str("api", "Claude").Err(err).Msg("获取 Token 失败")
 		c.JSON(500, gin.H{
 			"type":  "error",
 			"error": gin.H{"type": "api_error", "message": "failed to get token"},
@@ -70,7 +78,7 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 	}
 
 	token := tokenRecord.Token
-	log.Printf("使用 Token: %s (ID: %d)", tokenRecord.Name, tokenRecord.ID)
+	log.Debug().Str("api", "Claude").Str("token", tokenRecord.Name).Int64("id", tokenRecord.ID).Msg("使用 Token")
 
 	// 更新 Token 使用时间
 	h.store.UpdateTokenUsed(tokenRecord.ID)
@@ -82,7 +90,7 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 	// 调用 Puter API
 	responseText, err := h.puterClient.Call(messages, token)
 	if err != nil {
-		log.Printf("调用 Puter API 失败: %v", err)
+		log.Error().Str("api", "Claude").Err(err).Msg("调用 Puter API 失败")
 		c.JSON(500, gin.H{
 			"type":  "error",
 			"error": gin.H{"type": "api_error", "message": err.Error()},
@@ -95,6 +103,14 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 
 	// 发送 SSE 响应
 	h.sendSSEResponse(c, remainingText, toolCalls, len(responseText))
+
+	// 记录完成日志
+	elapsed := time.Since(startTime).Seconds()
+	log.Info().
+		Str("api", "Claude").
+		Str("耗时", fmt.Sprintf("%.2fs", elapsed)).
+		Int("响应长度", len(responseText)).
+		Msg("请求完成")
 }
 
 func (h *Handler) sendSSEResponse(c *gin.Context, text string, toolCalls []types.ParsedToolCall, totalLen int) {
