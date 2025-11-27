@@ -43,6 +43,7 @@ func main() {
 
 	// Claude API 兼容端点
 	r.POST("/v1/messages", h.HandleMessages)
+	r.POST("/messages", h.HandleMessages)
 
 	// OpenAI API 兼容端点
 	r.POST("/v1/chat/completions", h.HandleOpenAIChat)

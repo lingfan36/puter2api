@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 const (
 	apiURL       = "https://api.puter.com/drivers/call"
 	defaultModel = "claude-opus-4-5"
-	logFile      = "log.log"
 )
 
 // Client Puter API 客户端
@@ -49,10 +47,8 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 	}
 
 	body, _ := json.Marshal(puterReq)
-	log.Printf("发送请求到 Puter API, messages=%d", len(messages))
-
-	// 写入 curl 日志
-	c.logCurl(body)
+	startTime := time.Now()
+	log.Printf("[Puter] 开始请求, messages=%d", len(messages))
 
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewReader(body))
 	if err != nil {
@@ -88,7 +84,8 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 	}
 
 	responseText := fullText.String()
-	log.Printf("收到响应: %d 字符", len(responseText))
+	elapsed := time.Since(startTime)
+	log.Printf("[Puter] 请求完成, 耗时: %v, 响应: %d 字符", elapsed, len(responseText))
 
 	return responseText, nil
 }
@@ -109,40 +106,4 @@ func (c *Client) setHeaders(req *http.Request) {
 	req.Header.Set("sec-fetch-mode", "cors")
 	req.Header.Set("sec-fetch-site", "same-site")
 	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36")
-}
-
-// logCurl 将请求以 curl 格式写入日志文件
-func (c *Client) logCurl(body []byte) {
-	// 转义单引号
-	bodyStr := strings.ReplaceAll(string(body), "'", "'\\''")
-
-	curl := fmt.Sprintf(`# %s
-curl --location '%s' \
---header 'accept: */*' \
---header 'accept-language: zh-CN,zh;q=0.9' \
---header 'cache-control: no-cache' \
---header 'content-type: text/plain;actually=json' \
---header 'origin: https://docs.puter.com' \
---header 'pragma: no-cache' \
---header 'priority: u=1, i' \
---header 'referer: https://docs.puter.com/' \
---header 'sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"' \
---header 'sec-ch-ua-mobile: ?0' \
---header 'sec-ch-ua-platform: "macOS"' \
---header 'sec-fetch-dest: empty' \
---header 'sec-fetch-mode: cors' \
---header 'sec-fetch-site: same-site' \
---header 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' \
---data '%s'
-
-`, time.Now().Format("2006-01-02 15:04:05"), apiURL, bodyStr)
-
-	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Printf("写入日志文件失败: %v", err)
-		return
-	}
-	defer f.Close()
-
-	f.WriteString(curl)
 }
