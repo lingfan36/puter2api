@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gin-gonic/gin"
 	"puter2api/internal/types"
+
+	"github.com/gin-gonic/gin"
 )
 
 // SSEWriter SSE 写入器
@@ -47,7 +48,7 @@ func (w *SSEWriter) SendTextBlockStart(index int) {
 	w.SendEvent("content_block_start", types.ContentBlockStartEvent{
 		Type:         "content_block_start",
 		Index:        index,
-		ContentBlock: types.ContentBlock{Type: "text", Text: ""},
+		ContentBlock: types.TextContentBlock{Type: "text", Text: ""},
 	})
 }
 
@@ -65,7 +66,7 @@ func (w *SSEWriter) SendToolUseBlockStart(index int, id, name string) {
 	w.SendEvent("content_block_start", types.ContentBlockStartEvent{
 		Type:  "content_block_start",
 		Index: index,
-		ContentBlock: types.ContentBlock{
+		ContentBlock: types.ToolUseContentBlock{
 			Type:  "tool_use",
 			ID:    id,
 			Name:  name,
@@ -104,4 +105,3 @@ func (w *SSEWriter) SendMessageDelta(stopReason string, outputTokens int) {
 func (w *SSEWriter) SendMessageStop() {
 	w.SendEvent("message_stop", types.MessageStopEvent{Type: "message_stop"})
 }
-

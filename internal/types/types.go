@@ -30,6 +30,20 @@ type ContentBlock struct {
 	Content   json.RawMessage `json:"content,omitempty"`
 }
 
+// TextContentBlock 文本内容块（text 字段始终存在）
+type TextContentBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// ToolUseContentBlock 工具使用内容块
+type ToolUseContentBlock struct {
+	Type  string          `json:"type"`
+	ID    string          `json:"id"`
+	Name  string          `json:"name"`
+	Input json.RawMessage `json:"input"`
+}
+
 // Usage token 使用量
 type Usage struct {
 	InputTokens  int `json:"input_tokens"`
@@ -77,9 +91,9 @@ type MessageStartDetail struct {
 
 // ContentBlockStartEvent content_block_start 事件
 type ContentBlockStartEvent struct {
-	Type         string       `json:"type"`
-	Index        int          `json:"index"`
-	ContentBlock ContentBlock `json:"content_block"`
+	Type         string      `json:"type"`
+	Index        int         `json:"index"`
+	ContentBlock interface{} `json:"content_block"`
 }
 
 // ContentBlockDeltaEvent content_block_delta 事件
