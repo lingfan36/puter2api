@@ -155,3 +155,90 @@ type PuterStreamChunk struct {
 	Type string `json:"type"`
 	Text string `json:"text"`
 }
+
+// ==================== OpenAI API 类型 ====================
+
+// OpenAIRequest OpenAI Chat Completion 请求
+type OpenAIRequest struct {
+	Model            string            `json:"model"`
+	Messages         []OpenAIMessage   `json:"messages"`
+	MaxTokens        int               `json:"max_tokens,omitempty"`
+	Temperature      float64           `json:"temperature,omitempty"`
+	TopP             float64           `json:"top_p,omitempty"`
+	N                int               `json:"n,omitempty"`
+	Stream           bool              `json:"stream,omitempty"`
+	Stop             json.RawMessage   `json:"stop,omitempty"`
+	PresencePenalty  float64           `json:"presence_penalty,omitempty"`
+	FrequencyPenalty float64           `json:"frequency_penalty,omitempty"`
+	Tools            []OpenAITool      `json:"tools,omitempty"`
+	ToolChoice       json.RawMessage   `json:"tool_choice,omitempty"`
+}
+
+// OpenAIMessage OpenAI 消息
+type OpenAIMessage struct {
+	Role       string           `json:"role"`
+	Content    json.RawMessage  `json:"content"`
+	Name       string           `json:"name,omitempty"`
+	ToolCalls  []OpenAIToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+}
+
+// OpenAITool OpenAI 工具定义
+type OpenAITool struct {
+	Type     string             `json:"type"`
+	Function OpenAIToolFunction `json:"function"`
+}
+
+// OpenAIToolFunction OpenAI 工具函数定义
+type OpenAIToolFunction struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Parameters  json.RawMessage `json:"parameters,omitempty"`
+}
+
+// OpenAIToolCall OpenAI 工具调用
+type OpenAIToolCall struct {
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"`
+	Function OpenAIToolCallFunction `json:"function"`
+}
+
+// OpenAIToolCallFunction OpenAI 工具调用函数
+type OpenAIToolCallFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+// OpenAIResponse OpenAI Chat Completion 响应
+type OpenAIResponse struct {
+	ID                string         `json:"id"`
+	Object            string         `json:"object"`
+	Created           int64          `json:"created"`
+	Model             string         `json:"model"`
+	Choices           []OpenAIChoice `json:"choices"`
+	Usage             *OpenAIUsage   `json:"usage,omitempty"`
+	SystemFingerprint string         `json:"system_fingerprint,omitempty"`
+}
+
+// OpenAIChoice OpenAI 选择
+type OpenAIChoice struct {
+	Index        int                   `json:"index"`
+	Message      *OpenAIResponseMsg    `json:"message,omitempty"`
+	Delta        *OpenAIResponseMsg    `json:"delta,omitempty"`
+	FinishReason *string               `json:"finish_reason"`
+	Logprobs     *interface{}          `json:"logprobs"`
+}
+
+// OpenAIResponseMsg OpenAI 响应消息
+type OpenAIResponseMsg struct {
+	Role      string           `json:"role,omitempty"`
+	Content   *string          `json:"content"`
+	ToolCalls []OpenAIToolCall `json:"tool_calls,omitempty"`
+}
+
+// OpenAIUsage OpenAI 使用量
+type OpenAIUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
