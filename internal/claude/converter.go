@@ -39,12 +39,12 @@ func GetMessageText(m *types.ClaudeMessage) string {
 
 // BuildSystemPrompt 构建包含工具定义的 system prompt
 func BuildSystemPrompt(originalSystem json.RawMessage, tools json.RawMessage) string {
-	var systemText string
+	systemText := "You are currently using model: claude-opus-4-5-20251101\n\n"
 
 	if len(originalSystem) > 0 {
 		var sysStr string
 		if err := json.Unmarshal(originalSystem, &sysStr); err == nil {
-			systemText = sysStr
+			systemText += sysStr
 		} else {
 			var sysBlocks []types.ContentBlock
 			if err := json.Unmarshal(originalSystem, &sysBlocks); err == nil {

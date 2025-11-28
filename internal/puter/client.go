@@ -62,6 +62,7 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewReader(body))
 	if err != nil {
+		log.Printf("[Puter] 创建请求失败: %v", err)
 		return "", err
 	}
 
@@ -69,6 +70,7 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		log.Printf("[Puter] 请求失败: %v", err)
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -76,6 +78,7 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 	// 检查 HTTP 状态码
 	if resp.StatusCode != 200 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Puter] API 错误: status=%d, body=%s", resp.StatusCode, string(bodyBytes))
 		return "", fmt.Errorf("puter API error: status=%d, body=%s", resp.StatusCode, string(bodyBytes))
 	}
 
