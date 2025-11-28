@@ -16,18 +16,28 @@ import (
 
 const (
 	apiURL       = "https://api.puter.com/drivers/call"
-	defaultModel = "claude-opus-4-5"
+	defaultModel = "claude-opus-4-5-20251101"
 )
 
 // Client Puter API 客户端
 type Client struct {
 	httpClient *http.Client
+	userAgent  string
 }
 
 // NewClient 创建新的客户端
 func NewClient() *Client {
 	return &Client{
-		httpClient: &http.Client{Timeout: 5 * time.Minute},
+		httpClient: &http.Client{
+			Timeout: 5 * time.Minute,
+			Transport: &http.Transport{
+				DisableKeepAlives:   false,
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			},
+		},
+		userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
 	}
 }
 
@@ -91,19 +101,26 @@ func (c *Client) Call(messages []types.PuterMessage, authToken string) (string, 
 }
 
 func (c *Client) setHeaders(req *http.Request) {
-	req.Header.Set("accept", "*/*")
-	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
-	req.Header.Set("cache-control", "no-cache")
-	req.Header.Set("content-type", "text/plain;actually=json")
-	req.Header.Set("origin", "https://docs.puter.com")
-	req.Header.Set("pragma", "no-cache")
-	req.Header.Set("priority", "u=1, i")
-	req.Header.Set("referer", "https://docs.puter.com/")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br, zstd")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Content-Type", "text/plain;actually=json")
+	req.Header.Set("DNT", "1")
+	req.Header.Set("Origin", "https://docs.puter.com")
+	req.Header.Set("Pragma", "no-cache")
+	req.Header.Set("Referer", "https://docs.puter.com/")
+	req.Header.Set("Sec-Fetch-Dest", "empty")
+	req.Header.Set("Sec-Fetch-Mode", "cors")
+	req.Header.Set("Sec-Fetch-Site", "same-site")
+	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("sec-ch-ua", `"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"`)
 	req.Header.Set("sec-ch-ua-mobile", "?0")
 	req.Header.Set("sec-ch-ua-platform", `"macOS"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-site")
-	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36")
+	req.Header.Set("sec-ch-ua-full-version-list", `"Chromium";v="142.0.7355.4", "Google Chrome";v="142.0.7355.4", "Not_A Brand";v="99.0.0.0"`)
+	req.Header.Set("sec-ch-ua-arch", `"arm"`)
+	req.Header.Set("sec-ch-ua-bitness", `"64"`)
+	req.Header.Set("sec-ch-ua-model", `""`)
+	req.Header.Set("sec-ch-ua-platform-version", `"15.0.0"`)
 }
