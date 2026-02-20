@@ -438,10 +438,53 @@
               margin-bottom: 12px;
               outline: none;
           }
-          .model-search:focus {
-              border-color: #111;
-          }
-      </style>
+            .model-search:focus {
+                border-color: #111;
+            }
+            /* 折叠/展开 */
+            .model-grid.collapsed {
+                max-height: calc((34px + 6px) * 3);
+                overflow: hidden;
+                position: relative;
+            }
+            .model-grid.collapsed::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 30px;
+                background: linear-gradient(transparent, #fff);
+                pointer-events: none;
+            }
+            .expand-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                margin-top: 6px;
+                margin-left: 18px;
+                padding: 4px 14px;
+                font-size: 12px;
+                color: #666;
+                background: #f5f5f5;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .expand-btn:hover {
+                background: #eee;
+                color: #111;
+            }
+            .expand-btn .arrow {
+                display: inline-block;
+                transition: transform 0.2s;
+                font-size: 10px;
+            }
+            .expand-btn.expanded .arrow {
+                transform: rotate(180deg);
+            }
+        </style>
 </head>
 <body>
     <div class="container">
@@ -896,6 +939,25 @@
             }
         }
 
+        // 每行大约能显示的标签数（基于 280px minmax 和 ~1000px 容器）
+        const COLS_PER_ROW = 3;
+        const VISIBLE_ROWS = 3;
+        const VISIBLE_COUNT = COLS_PER_ROW * VISIBLE_ROWS;
+
+        // 切换分类折叠
+        function toggleCategory(btn, gridId) {
+            const grid = document.getElementById(gridId);
+            if (grid.classList.contains('collapsed')) {
+                grid.classList.remove('collapsed');
+                btn.classList.add('expanded');
+                btn.innerHTML = '<span class="arrow">▼</span> 收起';
+            } else {
+                grid.classList.add('collapsed');
+                btn.classList.remove('expanded');
+                btn.innerHTML = '<span class="arrow">▼</span> 展开全部 (' + grid.dataset.total + ')';
+            }
+        }
+
         // 按厂商渲染
         function renderByProvider(models) {
             const grouped = {};
@@ -911,18 +973,21 @@
 
             let html = '';
             let totalCount = 0;
-            sortedProviders.forEach(provider => {
+            sortedProviders.forEach((provider, idx) => {
                 const ids = grouped[provider];
                 totalCount += ids.length;
                 const cfg = providerConfig[provider] || { label: provider, color: '#999' };
+                const needCollapse = ids.length > VISIBLE_COUNT;
+                const gridId = 'pg-' + idx;
                 html += `<div class="model-category">
                     <div class="category-header">
                         <span class="category-dot" style="background:${cfg.color};"></span>
                         <h3>${cfg.label} (${ids.length})</h3>
                     </div>
-                    <div class="model-grid">
+                    <div class="model-grid${needCollapse ? ' collapsed' : ''}" id="${gridId}" data-total="${ids.length}">
                         ${ids.map(id => buildModelTag(id)).join('')}
                     </div>
+                    ${needCollapse ? `<button class="expand-btn" onclick="toggleCategory(this, '${gridId}')"><span class="arrow">▼</span> 展开全部 (${ids.length})</button>` : ''}
                 </div>`;
             });
             html += `<p style="color:#999; font-size:12px; margin-top:16px; text-align:center;">共 ${totalCount} 个模型。点击模型标签可复制 ID。</p>`;
@@ -944,19 +1009,22 @@
 
             let html = '';
             let totalCount = 0;
-            sortedUsages.forEach(usage => {
+            sortedUsages.forEach((usage, idx) => {
                 const ids = grouped[usage];
                 totalCount += ids.length;
                 const cfg = usageConfig[usage] || { label: usage, icon: '📦', color: '#999', desc: '' };
+                const needCollapse = ids.length > VISIBLE_COUNT;
+                const gridId = 'ug-' + idx;
                 html += `<div class="model-category">
                     <div class="category-header">
                         <span class="usage-icon" style="background:${cfg.color}20; color:${cfg.color};">${cfg.icon}</span>
                         <h3>${cfg.label} (${ids.length})</h3>
                         <span style="font-size:12px; color:#999; margin-left:4px;">${cfg.desc}</span>
                     </div>
-                    <div class="model-grid">
+                    <div class="model-grid${needCollapse ? ' collapsed' : ''}" id="${gridId}" data-total="${ids.length}">
                         ${ids.map(id => buildModelTag(id)).join('')}
                     </div>
+                    ${needCollapse ? `<button class="expand-btn" onclick="toggleCategory(this, '${gridId}')"><span class="arrow">▼</span> 展开全部 (${ids.length})</button>` : ''}
                 </div>`;
             });
             html += `<p style="color:#999; font-size:12px; margin-top:16px; text-align:center;">共 ${totalCount} 个模型。点击模型标签可复制 ID。</p>`;
