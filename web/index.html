@@ -333,21 +333,23 @@
             margin: 0;
         }
         .model-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 6px;
             padding-left: 18px;
         }
         .model-tag {
-            display: inline-flex;
+            display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 6px;
             background: #fafafa;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            padding: 6px 12px;
+            padding: 8px 12px;
             cursor: pointer;
             transition: all 0.15s;
+            overflow: hidden;
         }
         .model-tag:hover {
             background: #f0f0f0;
@@ -357,6 +359,9 @@
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 12px;
             color: #333;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .model-badge {
             font-size: 10px;
@@ -368,7 +373,75 @@
             background: #fff1f0;
             color: #e53e3e;
         }
-    </style>
+        .model-tag.copied {
+            background: #f0fff4;
+            border-color: #38a169;
+        }
+        .model-tag .copy-tip {
+            font-size: 11px;
+            color: #38a169;
+            font-weight: 600;
+            display: none;
+        }
+        .model-tag.copied .copy-tip {
+            display: inline;
+        }
+          .model-tag.copied .model-name {
+              color: #38a169;
+          }
+          /* 分类 Tab 切换 */
+          .tab-bar {
+              display: flex;
+              gap: 0;
+              margin: 16px 0 12px;
+              border-bottom: 2px solid #e0e0e0;
+          }
+          .tab-btn {
+              padding: 8px 20px;
+              font-size: 13px;
+              font-weight: 600;
+              color: #888;
+              background: none;
+              border: none;
+              cursor: pointer;
+              border-bottom: 2px solid transparent;
+              margin-bottom: -2px;
+              transition: all 0.15s;
+          }
+          .tab-btn:hover {
+              color: #333;
+          }
+          .tab-btn.active {
+              color: #111;
+              border-bottom-color: #111;
+          }
+          /* 用途分类图标 */
+          .usage-icon {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 22px;
+              height: 22px;
+              border-radius: 6px;
+              font-size: 13px;
+              flex-shrink: 0;
+          }
+          /* 搜索过滤 */
+          .model-search {
+              width: 100%;
+              padding: 10px 14px;
+              border: 1px solid #e0e0e0;
+              border-radius: 8px;
+              font-size: 13px;
+              background: #fafafa;
+              color: #111;
+              margin-bottom: 12px;
+              outline: none;
+          }
+          .model-search:focus {
+              border-color: #111;
+          }
+      </style>
 </head>
 <body>
     <div class="container">
@@ -429,7 +502,14 @@
             </div>
             <p style="color:#888; font-size:13px; margin-top:4px;">通过 Puter 平台中转，支持以下模型。调用时 <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px;">model</code> 字段填写对应模型 ID 即可。</p>
             <div id="modelsContainer" class="models-container hidden">
-                <p style="color: #999; text-align: center;">加载中...</p>
+                <input type="text" class="model-search" id="modelSearch" placeholder="搜索模型名称..." oninput="filterModels()">
+                <div class="tab-bar">
+                    <button class="tab-btn active" onclick="switchTab('provider', this)">按厂商分类</button>
+                    <button class="tab-btn" onclick="switchTab('usage', this)">按用途分类</button>
+                </div>
+                <div id="modelsContent">
+                    <p style="color: #999; text-align: center;">加载中...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -700,7 +780,12 @@
             }
         }
 
-        // 提供商配置
+        // ========== 模型分类数据 ==========
+        let allModels = [];
+        let currentTab = 'provider';
+        let modelsLoaded = false;
+
+        // 厂商配置
         const providerConfig = {
             anthropic: { label: 'Anthropic (Claude)', color: '#6b4fbb' },
             openai: { label: 'OpenAI (GPT)', color: '#10a37f' },
@@ -713,23 +798,106 @@
             other: { label: '其他模型', color: '#999' },
         };
 
+        // 用途分类配置
+        const usageConfig = {
+            chat:       { label: '文本对话',   icon: '💬', color: '#10a37f', desc: '通用聊天、问答、写作' },
+            code:       { label: '代码生成',   icon: '💻', color: '#6b4fbb', desc: '编程、代码补全、调试' },
+            reasoning:  { label: '深度推理',   icon: '🧠', color: '#f59e0b', desc: '复杂推理、数学、逻辑' },
+            vision:     { label: '视觉理解',   icon: '👁', color: '#4285f4', desc: '图片识别、多模态理解' },
+            image:      { label: '文生图',     icon: '🎨', color: '#f43f5e', desc: 'Text-to-Image 图片生成' },
+            video:      { label: '文生视频',   icon: '🎬', color: '#8b5cf6', desc: 'Text-to-Video 视频生成' },
+            audio:      { label: '语音/音频',  icon: '🔊', color: '#06b6d4', desc: 'TTS、语音识别、音频' },
+            embedding:  { label: '嵌入向量',   icon: '📐', color: '#64748b', desc: 'Embedding、文本向量化' },
+            rerank:     { label: '重排序',     icon: '📊', color: '#0891b2', desc: '搜索结果重排序' },
+            safety:     { label: '安全审核',   icon: '🛡', color: '#dc2626', desc: '内容安全、合规检查' },
+            search:     { label: '联网搜索',   icon: '🔍', color: '#16a34a', desc: '实时搜索、信息检索' },
+            other:      { label: '其他',       icon: '📦', color: '#999',    desc: '特殊用途/未分类' },
+        };
+
+        // 根据模型 ID 判断用途
+        function getModelUsage(id) {
+            const lower = id.toLowerCase();
+
+            // 安全审核
+            if (/guard|moderation|safeguard|virtue/.test(lower)) return 'safety';
+
+            // 视频生成
+            if (/sora|veo|kling|wan2.*t2v|wan2.*i2v|seedance|hailuo|video|pixverse|vidu/.test(lower)) return 'video';
+
+            // 图片生成
+            if (/flux|dall-e|stable-diffusion|sdxl|imagen|dreamshar|hidream|seedream|ideogram|juggernaut|flash-image|gemini.*image|gpt-5-image/.test(lower)) return 'image';
+
+            // 音频/语音
+            if (/whisper|sonic|cartesia|kokoro|voxtral|audio/.test(lower)) return 'audio';
+
+            // 嵌入向量
+            if (/embed|e5-large|bge-|gte-|bert-.*retrieval|mxbai-embed/.test(lower)) return 'embedding';
+
+            // 重排序
+            if (/rerank|rank/.test(lower)) return 'rerank';
+
+            // 联网搜索
+            if (/sonar|search|deep-research/.test(lower)) return 'search';
+
+            // 代码生成
+            if (/codex|codestral|devstral|coder|code-fast/.test(lower)) return 'code';
+
+            // 深度推理
+            if (/^o1|^o3|^o4|reason|think|prover|magistral|qwq|r1[^a-z]|deepseek-r|pro$/.test(lower)) return 'reasoning';
+
+            // 视觉理解（多模态）
+            if (/vision|vl-|pixtral|ui-tars|multimodal|4\.5v|gemma-3n/.test(lower)) return 'vision';
+
+            // 默认: 文本对话
+            return 'chat';
+        }
+
+        // Tab 切换
+        function switchTab(tab, btnEl) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            renderCurrentView();
+        }
+
+        // 搜索过滤
+        function filterModels() {
+            renderCurrentView();
+        }
+
+        // 获取过滤后的模型
+        function getFilteredModels() {
+            const query = (document.getElementById('modelSearch')?.value || '').toLowerCase().trim();
+            if (!query) return allModels;
+            return allModels.filter(m => m.id.toLowerCase().includes(query));
+        }
+
+        // 渲染当前视图
+        function renderCurrentView() {
+            const models = getFilteredModels();
+            if (currentTab === 'provider') {
+                renderByProvider(models);
+            } else {
+                renderByUsage(models);
+            }
+        }
+
         // 加载模型列表
-        let modelsLoaded = false;
         async function loadModels() {
             if (modelsLoaded) return;
             try {
                 const resp = await fetch(`${API_BASE}/v1/models`);
                 const data = await resp.json();
-                const models = data.data || [];
-                renderModels(models);
+                allModels = data.data || [];
                 modelsLoaded = true;
+                renderCurrentView();
             } catch (err) {
-                document.getElementById('modelsContainer').innerHTML = '<p style="color:#e53e3e; text-align:center;">加载模型列表失败</p>';
+                document.getElementById('modelsContent').innerHTML = '<p style="color:#e53e3e; text-align:center;">加载模型列表失败</p>';
             }
         }
 
-        // 渲染模型列表
-        function renderModels(models) {
+        // 按厂商渲染
+        function renderByProvider(models) {
             const grouped = {};
             models.forEach(m => {
                 const provider = m.owned_by || 'other';
@@ -737,10 +905,8 @@
                 grouped[provider].push(m.id);
             });
 
-            // 按配置顺序排列
             const order = ['anthropic', 'openai', 'google', 'xai', 'deepseek', 'mistral', 'togetherai', 'openrouter', 'other'];
             const sortedProviders = order.filter(p => grouped[p]);
-            // 添加未在 order 中的提供商
             Object.keys(grouped).forEach(p => { if (!sortedProviders.includes(p)) sortedProviders.push(p); });
 
             let html = '';
@@ -755,12 +921,51 @@
                         <h3>${cfg.label} (${ids.length})</h3>
                     </div>
                     <div class="model-grid">
-                        ${ids.map(id => `<div class="model-tag" onclick="copyModelId(this)"><span class="model-name">${escapeHtml(id)}</span></div>`).join('')}
+                        ${ids.map(id => buildModelTag(id)).join('')}
                     </div>
                 </div>`;
             });
             html += `<p style="color:#999; font-size:12px; margin-top:16px; text-align:center;">共 ${totalCount} 个模型。点击模型标签可复制 ID。</p>`;
-            document.getElementById('modelsContainer').innerHTML = html;
+            document.getElementById('modelsContent').innerHTML = html;
+        }
+
+        // 按用途渲染
+        function renderByUsage(models) {
+            const grouped = {};
+            models.forEach(m => {
+                const usage = getModelUsage(m.id);
+                if (!grouped[usage]) grouped[usage] = [];
+                grouped[usage].push(m.id);
+            });
+
+            const order = ['chat', 'code', 'reasoning', 'vision', 'image', 'video', 'audio', 'embedding', 'rerank', 'safety', 'search', 'other'];
+            const sortedUsages = order.filter(u => grouped[u]);
+            Object.keys(grouped).forEach(u => { if (!sortedUsages.includes(u)) sortedUsages.push(u); });
+
+            let html = '';
+            let totalCount = 0;
+            sortedUsages.forEach(usage => {
+                const ids = grouped[usage];
+                totalCount += ids.length;
+                const cfg = usageConfig[usage] || { label: usage, icon: '📦', color: '#999', desc: '' };
+                html += `<div class="model-category">
+                    <div class="category-header">
+                        <span class="usage-icon" style="background:${cfg.color}20; color:${cfg.color};">${cfg.icon}</span>
+                        <h3>${cfg.label} (${ids.length})</h3>
+                        <span style="font-size:12px; color:#999; margin-left:4px;">${cfg.desc}</span>
+                    </div>
+                    <div class="model-grid">
+                        ${ids.map(id => buildModelTag(id)).join('')}
+                    </div>
+                </div>`;
+            });
+            html += `<p style="color:#999; font-size:12px; margin-top:16px; text-align:center;">共 ${totalCount} 个模型。点击模型标签可复制 ID。</p>`;
+            document.getElementById('modelsContent').innerHTML = html;
+        }
+
+        // 构建模型标签
+        function buildModelTag(id) {
+            return `<div class="model-tag" onclick="copyModelId(this)" title="点击复制"><span class="model-name">${escapeHtml(id)}</span><span class="copy-tip">&#10003; 已复制</span></div>`;
         }
 
         function escapeHtml(str) {
@@ -769,9 +974,26 @@
 
         function copyModelId(el) {
             const name = el.querySelector('.model-name').textContent;
-            navigator.clipboard.writeText(name).then(() => {
+            function onCopied() {
+                el.classList.add('copied');
                 showMessage('已复制模型 ID: ' + name, 'success');
-            });
+                setTimeout(() => el.classList.remove('copied'), 1500);
+            }
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(name).then(onCopied).catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
+            function fallbackCopy() {
+                const ta = document.createElement('textarea');
+                ta.value = name;
+                ta.style.cssText = 'position:fixed;opacity:0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                onCopied();
+            }
         }
 
         // 页面加载时获取 Token 列表
