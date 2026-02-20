@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"puter2api/internal/claude"
@@ -386,33 +387,47 @@ func (h *Handler) writeSSEChunk(c *gin.Context, data any) {
 	c.Writer.Flush()
 }
 
+// getModelProvider 根据模型 ID 判断提供商
+func getModelProvider(id string) string {
+	if strings.HasPrefix(id, "openrouter:") {
+		return "openrouter"
+	}
+	if strings.HasPrefix(id, "togetherai:") {
+		return "togetherai"
+	}
+	if strings.HasPrefix(id, "claude-") {
+		return "anthropic"
+	}
+	if strings.HasPrefix(id, "gpt-") || strings.HasPrefix(id, "o1") || strings.HasPrefix(id, "o3") || strings.HasPrefix(id, "o4") {
+		return "openai"
+	}
+	if strings.HasPrefix(id, "gemini-") {
+		return "google"
+	}
+	if strings.HasPrefix(id, "grok-") {
+		return "xai"
+	}
+	if strings.HasPrefix(id, "deepseek-") {
+		return "deepseek"
+	}
+	if strings.HasPrefix(id, "mistral-") || strings.HasPrefix(id, "ministral-") || strings.HasPrefix(id, "open-mistral-") || strings.HasPrefix(id, "pixtral-") || strings.HasPrefix(id, "codestral-") || strings.HasPrefix(id, "devstral-") || strings.HasPrefix(id, "magistral-") {
+		return "mistral"
+	}
+	return "other"
+}
+
 // HandleModels 处理 /v1/models 请求
 func (h *Handler) HandleModels(c *gin.Context) {
-	models := []map[string]any{
-		{
-			"id":       "claude-opus-4-5",
+	modelList := h.modelList
+
+	models := make([]map[string]any, 0, len(modelList))
+	for _, id := range modelList {
+		models = append(models, map[string]any{
+			"id":       id,
 			"object":   "model",
 			"created":  1700000000,
-			"owned_by": "anthropic",
-		},
-		{
-			"id":       "gpt-4",
-			"object":   "model",
-			"created":  1700000000,
-			"owned_by": "openai",
-		},
-		{
-			"id":       "gpt-4-turbo",
-			"object":   "model",
-			"created":  1700000000,
-			"owned_by": "openai",
-		},
-		{
-			"id":       "gpt-3.5-turbo",
-			"object":   "model",
-			"created":  1700000000,
-			"owned_by": "openai",
-		},
+			"owned_by": getModelProvider(id),
+		})
 	}
 
 	c.JSON(200, gin.H{

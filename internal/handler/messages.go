@@ -19,13 +19,15 @@ import (
 type Handler struct {
 	puterClient *puter.Client
 	store       *storage.Storage
+	modelList   []string
 }
 
 // NewHandler 创建处理器
-func NewHandler(store *storage.Storage) *Handler {
+func NewHandler(store *storage.Storage, modelList []string) *Handler {
 	return &Handler{
 		puterClient: puter.NewClient(),
 		store:       store,
+		modelList:   modelList,
 	}
 }
 

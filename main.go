@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -18,6 +19,9 @@ import (
 
 //go:embed web/*
 var webFS embed.FS
+
+//go:embed model.json
+var modelJSON []byte
 
 func main() {
 	// 配置 zerolog 彩色控制台输出
@@ -44,8 +48,17 @@ func main() {
 	}
 	defer store.Close()
 
+	// 加载模型列表
+	var modelFile struct {
+		Models []string `json:"models"`
+	}
+	if err := json.Unmarshal(modelJSON, &modelFile); err != nil {
+		log.Fatal().Err(err).Msg("解析 model.json 失败")
+	}
+	log.Info().Int("count", len(modelFile.Models)).Msg("加载模型列表")
+
 	// 创建处理器 - 从数据库获取 Token
-	h := handler.NewHandler(store)
+	h := handler.NewHandler(store, modelFile.Models)
 	th := handler.NewTokenHandler(store)
 
 	// 设置 Gin 使用 zerolog

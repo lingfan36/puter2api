@@ -306,6 +306,68 @@
             display: flex;
             gap: 8px;
         }
+        /* 模型列表样式 */
+        .models-container {
+            margin-top: 16px;
+        }
+        .model-category {
+            margin-bottom: 20px;
+        }
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .category-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .category-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111;
+            margin: 0;
+        }
+        .model-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-left: 18px;
+        }
+        .model-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .model-tag:hover {
+            background: #f0f0f0;
+            border-color: #ccc;
+        }
+        .model-name {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            color: #333;
+        }
+        .model-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .model-badge.hot {
+            background: #fff1f0;
+            color: #e53e3e;
+        }
     </style>
 </head>
 <body>
@@ -349,6 +411,24 @@
                 </div>
             </div>
             <div id="tokenList" class="token-list">
+                <p style="color: #999; text-align: center;">加载中...</p>
+            </div>
+        </div>
+        <!-- 支持的模型列表 -->
+        <div class="card">
+            <div class="toolbar">
+                <h2 style="margin-bottom: 0;">支持的模型</h2>
+                <div class="toolbar-left">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleModels()" id="toggleModelsBtn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        展开
+                    </button>
+                </div>
+            </div>
+            <p style="color:#888; font-size:13px; margin-top:4px;">通过 Puter 平台中转，支持以下模型。调用时 <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px;">model</code> 字段填写对应模型 ID 即可。</p>
+            <div id="modelsContainer" class="models-container hidden">
                 <p style="color: #999; text-align: center;">加载中...</p>
             </div>
         </div>
@@ -605,6 +685,94 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
         });
+
+        // 切换模型列表显示
+        function toggleModels() {
+            const container = document.getElementById('modelsContainer');
+            const btn = document.getElementById('toggleModelsBtn');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg> 收起';
+                loadModels();
+            } else {
+                container.classList.add('hidden');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg> 展开';
+            }
+        }
+
+        // 提供商配置
+        const providerConfig = {
+            anthropic: { label: 'Anthropic (Claude)', color: '#6b4fbb' },
+            openai: { label: 'OpenAI (GPT)', color: '#10a37f' },
+            google: { label: 'Google (Gemini)', color: '#4285f4' },
+            xai: { label: 'xAI (Grok)', color: '#f43f5e' },
+            deepseek: { label: 'DeepSeek', color: '#0066ff' },
+            mistral: { label: 'Mistral', color: '#888' },
+            togetherai: { label: 'Together AI', color: '#f59e0b' },
+            openrouter: { label: 'OpenRouter', color: '#06b6d4' },
+            other: { label: '其他模型', color: '#999' },
+        };
+
+        // 加载模型列表
+        let modelsLoaded = false;
+        async function loadModels() {
+            if (modelsLoaded) return;
+            try {
+                const resp = await fetch(`${API_BASE}/v1/models`);
+                const data = await resp.json();
+                const models = data.data || [];
+                renderModels(models);
+                modelsLoaded = true;
+            } catch (err) {
+                document.getElementById('modelsContainer').innerHTML = '<p style="color:#e53e3e; text-align:center;">加载模型列表失败</p>';
+            }
+        }
+
+        // 渲染模型列表
+        function renderModels(models) {
+            const grouped = {};
+            models.forEach(m => {
+                const provider = m.owned_by || 'other';
+                if (!grouped[provider]) grouped[provider] = [];
+                grouped[provider].push(m.id);
+            });
+
+            // 按配置顺序排列
+            const order = ['anthropic', 'openai', 'google', 'xai', 'deepseek', 'mistral', 'togetherai', 'openrouter', 'other'];
+            const sortedProviders = order.filter(p => grouped[p]);
+            // 添加未在 order 中的提供商
+            Object.keys(grouped).forEach(p => { if (!sortedProviders.includes(p)) sortedProviders.push(p); });
+
+            let html = '';
+            let totalCount = 0;
+            sortedProviders.forEach(provider => {
+                const ids = grouped[provider];
+                totalCount += ids.length;
+                const cfg = providerConfig[provider] || { label: provider, color: '#999' };
+                html += `<div class="model-category">
+                    <div class="category-header">
+                        <span class="category-dot" style="background:${cfg.color};"></span>
+                        <h3>${cfg.label} (${ids.length})</h3>
+                    </div>
+                    <div class="model-grid">
+                        ${ids.map(id => `<div class="model-tag" onclick="copyModelId(this)"><span class="model-name">${escapeHtml(id)}</span></div>`).join('')}
+                    </div>
+                </div>`;
+            });
+            html += `<p style="color:#999; font-size:12px; margin-top:16px; text-align:center;">共 ${totalCount} 个模型。点击模型标签可复制 ID。</p>`;
+            document.getElementById('modelsContainer').innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function copyModelId(el) {
+            const name = el.querySelector('.model-name').textContent;
+            navigator.clipboard.writeText(name).then(() => {
+                showMessage('已复制模型 ID: ' + name, 'success');
+            });
+        }
 
         // 页面加载时获取 Token 列表
         loadTokens();
