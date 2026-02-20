@@ -90,7 +90,11 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 	messages := claude.ConvertMessages(req.Messages, systemPrompt)
 
 	// 调用 Puter API
-	responseText, err := h.puterClient.Call(messages, token)
+	model := req.Model
+	if model == "" {
+		model = "claude-opus-4-5-20251001"
+	}
+	responseText, err := h.puterClient.CallWithModel(messages, token, model)
 	if err != nil {
 		log.Error().Str("api", "Claude").Err(err).Msg("调用 Puter API 失败")
 		c.JSON(500, gin.H{
@@ -104,7 +108,7 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 	toolCalls, remainingText := claude.ParseToolCalls(responseText)
 
 	// 发送 SSE 响应
-	h.sendSSEResponse(c, remainingText, toolCalls, len(responseText))
+	h.sendSSEResponse(c, model, remainingText, toolCalls, len(responseText))
 
 	// 记录完成日志
 	elapsed := time.Since(startTime).Seconds()
@@ -115,12 +119,12 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 		Msg("请求完成")
 }
 
-func (h *Handler) sendSSEResponse(c *gin.Context, text string, toolCalls []types.ParsedToolCall, totalLen int) {
+func (h *Handler) sendSSEResponse(c *gin.Context, model string, text string, toolCalls []types.ParsedToolCall, totalLen int) {
 	msgID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
 	sse := claude.NewSSEWriter(c)
 
 	// 1. message_start
-	sse.SendMessageStart(msgID, "claude-opus-4-5")
+	sse.SendMessageStart(msgID, model)
 
 	blockIndex := 0
 

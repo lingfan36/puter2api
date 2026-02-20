@@ -73,6 +73,8 @@ func main() {
 
 	// OpenAI API 兼容端点
 	r.POST("/v1/chat/completions", h.HandleOpenAIChat)
+	r.POST("/v1/images/generations", h.HandleImageGeneration)
+	r.POST("/v1/videos/generations", h.HandleVideoGeneration)
 	r.GET("/v1/models", h.HandleModels)
 
 	// Token 管理 API

@@ -484,6 +484,150 @@
             .expand-btn.expanded .arrow {
                 transform: rotate(180deg);
             }
+            /* ========== API 文档样式 ========== */
+            .api-section {
+                margin-bottom: 24px;
+                padding-bottom: 24px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            .api-section:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+            .api-section-title {
+                font-size: 15px;
+                font-weight: 700;
+                color: #111;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .api-section-title code {
+                background: #f0f0f0;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #555;
+            }
+            .api-desc {
+                color: #666;
+                font-size: 13px;
+                margin-bottom: 14px;
+            }
+            .api-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }
+            .api-table td, .api-table th {
+                padding: 8px 12px;
+                text-align: left;
+                vertical-align: top;
+            }
+            .api-table-bordered {
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .api-table-bordered th {
+                background: #fafafa;
+                font-weight: 600;
+                color: #333;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            .api-table-bordered td {
+                border-bottom: 1px solid #f0f0f0;
+            }
+            .api-table-bordered tr:last-child td {
+                border-bottom: none;
+            }
+            .api-label {
+                font-weight: 600;
+                color: #333;
+                white-space: nowrap;
+                width: 120px;
+            }
+            .api-code {
+                background: #f0f0f0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'Monaco', 'Menlo', monospace;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .api-code:hover {
+                background: #e2e2e2;
+            }
+            .method-badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 700;
+                font-family: 'Monaco', 'Menlo', monospace;
+            }
+            .method-badge.get {
+                background: #dbeafe;
+                color: #1d4ed8;
+            }
+            .method-badge.post {
+                background: #dcfce7;
+                color: #15803d;
+            }
+            .api-params h4 {
+                font-size: 13px;
+                font-weight: 600;
+                color: #444;
+                margin-bottom: 8px;
+            }
+            .api-example {
+                margin-top: 12px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .api-example-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 14px;
+                background: #fafafa;
+                border-bottom: 1px solid #e0e0e0;
+                font-size: 12px;
+                font-weight: 600;
+                color: #555;
+            }
+            .api-pre {
+                margin: 0;
+                padding: 14px;
+                background: #fdfdfd;
+                overflow-x: auto;
+                font-size: 12px;
+                line-height: 1.6;
+                font-family: 'Monaco', 'Menlo', monospace;
+                color: #333;
+            }
+            .api-notes {
+                list-style: none;
+                padding: 0;
+            }
+            .api-notes li {
+                position: relative;
+                padding: 6px 0 6px 20px;
+                font-size: 13px;
+                color: #555;
+                line-height: 1.6;
+            }
+            .api-notes li::before {
+                content: '•';
+                position: absolute;
+                left: 4px;
+                color: #999;
+                font-weight: bold;
+            }
         </style>
 </head>
 <body>
@@ -554,6 +698,406 @@
                     <p style="color: #999; text-align: center;">加载中...</p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- API 请求文档 -->
+    <div class="card">
+        <div class="toolbar">
+            <h2 style="margin-bottom: 0;">API 请求文档</h2>
+            <div class="toolbar-left">
+                <button class="btn btn-secondary btn-sm" onclick="toggleApiDocs()" id="toggleApiDocsBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    展开
+                </button>
+            </div>
+        </div>
+        <p style="color:#888; font-size:13px; margin-top:4px;">兼容 OpenAI / Anthropic API 格式，任何支持自定义 Base URL 的客户端均可直接使用。</p>
+        <div id="apiDocsContainer" class="hidden" style="margin-top:16px;">
+
+            <!-- 基本信息 -->
+            <div class="api-section">
+                <h3 class="api-section-title">基本信息</h3>
+                <table class="api-table">
+                    <tbody>
+                        <tr><td class="api-label">Base URL</td><td><code class="api-code" onclick="copyText(this)" title="点击复制">{your-domain}</code>（部署后替换为实际地址）</td></tr>
+                        <tr><td class="api-label">认证方式</td><td><code class="api-code">Authorization: Bearer {any-key}</code>（无需真实 Key，随便填）</td></tr>
+                        <tr><td class="api-label">Content-Type</td><td><code class="api-code">application/json</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 端点一览 -->
+            <div class="api-section">
+                <h3 class="api-section-title">端点一览</h3>
+                <table class="api-table api-table-bordered">
+                    <thead>
+                        <tr>
+                            <th>方法</th>
+                            <th>路径</th>
+                            <th>说明</th>
+                            <th>兼容格式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method-badge get">GET</span></td>
+                            <td><code>/v1/models</code></td>
+                            <td>获取支持的模型列表</td>
+                            <td>OpenAI</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge post">POST</span></td>
+                            <td><code>/v1/chat/completions</code></td>
+                            <td>文本对话（支持流式）</td>
+                            <td>OpenAI</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge post">POST</span></td>
+                            <td><code>/v1/messages</code></td>
+                            <td>文本对话（Claude 格式）</td>
+                            <td>Anthropic</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge post">POST</span></td>
+                            <td><code>/v1/images/generations</code></td>
+                            <td>图片生成</td>
+                            <td>OpenAI</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge post">POST</span></td>
+                            <td><code>/v1/videos/generations</code></td>
+                            <td>视频生成</td>
+                            <td>自定义</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 1. 文本对话 -->
+            <div class="api-section">
+                <h3 class="api-section-title">1. 文本对话 <span class="method-badge post" style="font-size:11px;">POST</span> <code>/v1/chat/completions</code></h3>
+                <p class="api-desc">兼容 OpenAI Chat Completions API，支持流式和非流式输出。</p>
+                <div class="api-params">
+                    <h4>请求参数</h4>
+                    <table class="api-table api-table-bordered">
+                        <thead>
+                            <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>model</code></td><td>string</td><td>是</td><td>模型 ID，如 <code>gpt-4o-mini</code>、<code>claude-sonnet-4-20250514</code></td></tr>
+                            <tr><td><code>messages</code></td><td>array</td><td>是</td><td>对话消息数组，每项含 <code>role</code> 和 <code>content</code></td></tr>
+                            <tr><td><code>stream</code></td><td>boolean</td><td>否</td><td>是否流式输出，默认 <code>false</code></td></tr>
+                            <tr><td><code>temperature</code></td><td>number</td><td>否</td><td>温度参数，0~2</td></tr>
+                            <tr><td><code>max_tokens</code></td><td>integer</td><td>否</td><td>最大输出 token 数</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>请求示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>POST /v1/chat/completions
+Content-Type: application/json
+Authorization: Bearer any-key
+
+{
+  "model": "gpt-4o-mini",
+  "messages": [
+    { "role": "system", "content": "You are a helpful assistant." },
+    { "role": "user", "content": "你好，请自我介绍" }
+  ],
+  "stream": false,
+  "temperature": 0.7
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>响应示例</span>
+                    </div>
+                    <pre class="api-pre"><code>{
+  "id": "chatcmpl-xxx",
+  "object": "chat.completion",
+  "model": "gpt-4o-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "你好！我是一个 AI 助手..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 50,
+    "total_tokens": 70
+  }
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>cURL 示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>curl -X POST https://your-domain/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer any-key" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "hello"}],
+    "stream": false
+  }'</code></pre>
+                </div>
+            </div>
+
+            <!-- 2. Claude 格式对话 -->
+            <div class="api-section">
+                <h3 class="api-section-title">2. Claude 格式对话 <span class="method-badge post" style="font-size:11px;">POST</span> <code>/v1/messages</code></h3>
+                <p class="api-desc">兼容 Anthropic Messages API 格式，支持 SSE 流式输出。</p>
+                <div class="api-params">
+                    <h4>请求参数</h4>
+                    <table class="api-table api-table-bordered">
+                        <thead>
+                            <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>model</code></td><td>string</td><td>否</td><td>模型 ID，默认 <code>claude-opus-4-5-20251001</code></td></tr>
+                            <tr><td><code>messages</code></td><td>array</td><td>是</td><td>对话消息数组</td></tr>
+                            <tr><td><code>stream</code></td><td>boolean</td><td>否</td><td>是否流式输出</td></tr>
+                            <tr><td><code>max_tokens</code></td><td>integer</td><td>否</td><td>最大输出 token 数，默认 8192</td></tr>
+                            <tr><td><code>system</code></td><td>string</td><td>否</td><td>系统提示词</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>请求示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>POST /v1/messages
+Content-Type: application/json
+x-api-key: any-key
+anthropic-version: 2023-06-01
+
+{
+  "model": "claude-sonnet-4-20250514",
+  "messages": [
+    { "role": "user", "content": "解释量子计算" }
+  ],
+  "max_tokens": 4096,
+  "stream": true
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>cURL 示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>curl -X POST https://your-domain/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: any-key" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "claude-sonnet-4-20250514",
+    "messages": [{"role": "user", "content": "hello"}],
+    "max_tokens": 4096,
+    "stream": true
+  }'</code></pre>
+                </div>
+            </div>
+
+            <!-- 3. 获取模型列表 -->
+            <div class="api-section">
+                <h3 class="api-section-title">3. 获取模型列表 <span class="method-badge get" style="font-size:11px;">GET</span> <code>/v1/models</code></h3>
+                <p class="api-desc">返回所有支持的模型，兼容 OpenAI List Models API。</p>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>cURL 示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>curl https://your-domain/v1/models</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>响应示例</span>
+                    </div>
+                    <pre class="api-pre"><code>{
+  "object": "list",
+  "data": [
+    { "id": "gpt-4o-mini", "object": "model", "owned_by": "openai" },
+    { "id": "claude-sonnet-4-20250514", "object": "model", "owned_by": "anthropic" },
+    ...
+  ]
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- 4. 图片生成 -->
+            <div class="api-section">
+                <h3 class="api-section-title">4. 图片生成 <span class="method-badge post" style="font-size:11px;">POST</span> <code>/v1/images/generations</code></h3>
+                <p class="api-desc">兼容 OpenAI Images API，支持 DALL-E、FLUX、Stable Diffusion 等模型。</p>
+                <div class="api-params">
+                    <h4>请求参数</h4>
+                    <table class="api-table api-table-bordered">
+                        <thead>
+                            <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>model</code></td><td>string</td><td>否</td><td>模型 ID，默认 <code>dall-e-3</code></td></tr>
+                            <tr><td><code>prompt</code></td><td>string</td><td>是</td><td>图片描述文本</td></tr>
+                            <tr><td><code>n</code></td><td>integer</td><td>否</td><td>生成数量，默认 1</td></tr>
+                            <tr><td><code>size</code></td><td>string</td><td>否</td><td>图片尺寸，如 <code>1024x1024</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>请求示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>POST /v1/images/generations
+Content-Type: application/json
+Authorization: Bearer any-key
+
+{
+  "model": "dall-e-3",
+  "prompt": "A cute cat sitting on a windowsill at sunset",
+  "n": 1,
+  "size": "1024x1024"
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>响应示例</span>
+                    </div>
+                    <pre class="api-pre"><code>{
+  "created": 1708000000,
+  "data": [
+    {
+      "url": "https://..."
+    }
+  ]
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>cURL 示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>curl -X POST https://your-domain/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer any-key" \
+  -d '{
+    "model": "dall-e-3",
+    "prompt": "a cute cat",
+    "n": 1
+  }'</code></pre>
+                </div>
+            </div>
+
+            <!-- 5. 视频生成 -->
+            <div class="api-section">
+                <h3 class="api-section-title">5. 视频生成 <span class="method-badge post" style="font-size:11px;">POST</span> <code>/v1/videos/generations</code></h3>
+                <p class="api-desc">通过 Together AI 驱动，支持 Sora、Veo、Kling、Hailuo 等视频模型。视频生成耗时较长（1~5 分钟），请设置足够超时时间。</p>
+                <div class="api-params">
+                    <h4>请求参数</h4>
+                    <table class="api-table api-table-bordered">
+                        <thead>
+                            <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>model</code></td><td>string</td><td>是</td><td>视频模型 ID，如 <code>togetherai:openai/sora-2</code></td></tr>
+                            <tr><td><code>prompt</code></td><td>string</td><td>是</td><td>视频描述文本</td></tr>
+                            <tr><td><code>width</code></td><td>integer</td><td>否</td><td>视频宽度，如 1920</td></tr>
+                            <tr><td><code>height</code></td><td>integer</td><td>否</td><td>视频高度，如 1080</td></tr>
+                            <tr><td><code>fps</code></td><td>integer</td><td>否</td><td>帧率，如 24</td></tr>
+                            <tr><td><code>duration</code></td><td>number</td><td>否</td><td>时长（秒）</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>请求示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>POST /v1/videos/generations
+Content-Type: application/json
+Authorization: Bearer any-key
+
+{
+  "model": "togetherai:minimax/hailuo-02",
+  "prompt": "A cinematic drone shot of a futuristic city at night",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>响应示例</span>
+                    </div>
+                    <pre class="api-pre"><code>{
+  "created": 1708000000,
+  "data": [
+    {
+      "url": "https://..."
+    }
+  ]
+}</code></pre>
+                </div>
+                <div class="api-example">
+                    <div class="api-example-header">
+                        <span>cURL 示例</span>
+                        <button class="btn btn-secondary btn-sm" onclick="copyCodeBlock(this)">复制</button>
+                    </div>
+                    <pre class="api-pre"><code>curl -X POST https://your-domain/v1/videos/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer any-key" \
+  -d '{
+    "model": "togetherai:minimax/hailuo-02",
+    "prompt": "a drone shot of a city",
+    "width": 1920,
+    "height": 1080
+  }'</code></pre>
+                </div>
+            </div>
+
+            <!-- 客户端接入指南 -->
+            <div class="api-section">
+                <h3 class="api-section-title">6. 客户端接入指南</h3>
+                <table class="api-table api-table-bordered">
+                    <thead>
+                        <tr><th>客户端</th><th>配置方式</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><b>ChatBox</b></td><td>设置 > API Provider > OpenAI API Compatible > API Host 填部署地址</td></tr>
+                        <tr><td><b>NextChat</b></td><td>设置 > 接口地址填部署地址，API Key 随便填</td></tr>
+                        <tr><td><b>LobeChat</b></td><td>设置 > 语言模型 > OpenAI > API Proxy 填 <code>{domain}/v1</code></td></tr>
+                        <tr><td><b>Cursor / Windsurf</b></td><td>设置中 OpenAI Base URL 填 <code>{domain}/v1</code></td></tr>
+                        <tr><td><b>one-api / new-api</b></td><td>添加渠道时 Base URL 填部署地址</td></tr>
+                        <tr><td><b>Python openai 库</b></td><td><code>client = OpenAI(base_url="{domain}/v1", api_key="any")</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 注意事项 -->
+            <div class="api-section">
+                <h3 class="api-section-title">7. 注意事项</h3>
+                <ul class="api-notes">
+                    <li>每个 Puter 账号每日约有 <b>1000 次</b>请求限制，高级模型（opus/pro/o1）消耗更快</li>
+                    <li>推荐使用 <code>nano</code>/<code>mini</code>/<code>flash</code>/<code>haiku</code> 级别模型，额度更宽裕</li>
+                    <li>图片生成约 <b>5 张/天</b>，视频生成额度更少，请省着用</li>
+                    <li>视频生成耗时 1~5 分钟，请设置足够的超时时间（建议 300 秒）</li>
+                    <li>多账号轮询可线性扩展总额度：10 个账号 = 10,000 次/天</li>
+                    <li>Authorization 头无需真实 API Key，系统使用管理面板中配置的 Puter Token</li>
+                </ul>
+            </div>
+
         </div>
     </div>
 
@@ -1066,6 +1610,58 @@
 
         // 页面加载时获取 Token 列表
         loadTokens();
+
+        // 切换 API 文档显示
+        function toggleApiDocs() {
+            const container = document.getElementById('apiDocsContainer');
+            const btn = document.getElementById('toggleApiDocsBtn');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg> 收起';
+            } else {
+                container.classList.add('hidden');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg> 展开';
+            }
+        }
+
+        // 复制文本（点击 code 标签）
+        function copyText(el) {
+            const text = el.textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => showMessage('已复制: ' + text, 'success'));
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;opacity:0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showMessage('已复制: ' + text, 'success');
+            }
+        }
+
+        // 复制代码块
+        function copyCodeBlock(btn) {
+            const pre = btn.closest('.api-example').querySelector('.api-pre code');
+            const text = pre.textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = '已复制';
+                    setTimeout(() => btn.textContent = '复制', 1500);
+                });
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;opacity:0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                btn.textContent = '已复制';
+                setTimeout(() => btn.textContent = '复制', 1500);
+            }
+        }
     </script>
 </body>
 </html>

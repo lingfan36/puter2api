@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -84,7 +85,7 @@ func (h *Handler) HandleOpenAIChat(c *gin.Context) {
 	puterMessages := claude.ConvertMessages(messages, systemPrompt)
 
 	// 调用 Puter API
-	responseText, err := h.puterClient.Call(puterMessages, token)
+	responseText, err := h.puterClient.CallWithModel(puterMessages, token, req.Model)
 	if err != nil {
 		log.Error().Str("api", "OpenAI").Err(err).Msg("调用 Puter API 失败")
 		c.JSON(500, gin.H{
@@ -434,4 +435,153 @@ func (h *Handler) HandleModels(c *gin.Context) {
 		"object": "list",
 		"data":   models,
 	})
+}
+
+// HandleImageGeneration 处理 /v1/images/generations 请求
+func (h *Handler) HandleImageGeneration(c *gin.Context) {
+	startTime := time.Now()
+
+	var req struct {
+		Model          string `json:"model"`
+		Prompt         string `json:"prompt"`
+		N              int    `json:"n"`
+		Size           string `json:"size"`
+		ResponseFormat string `json:"response_format"` // "url" or "b64_json"
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"message": err.Error(), "type": "invalid_request_error"}})
+		return
+	}
+	if req.Model == "" {
+		req.Model = "dall-e-3"
+	}
+	if req.N == 0 {
+		req.N = 1
+	}
+	if req.ResponseFormat == "" {
+		req.ResponseFormat = "b64_json"
+	}
+
+	log.Info().Str("api", "ImageGen").Str("model", req.Model).Str("prompt", req.Prompt).Msg("收到请求")
+
+	// 获取 Token
+	tokenRecord, err := h.store.GetActiveToken()
+	if err != nil || tokenRecord == nil {
+		c.JSON(500, gin.H{"error": gin.H{"message": "no active token", "type": "api_error"}})
+		return
+	}
+	h.store.UpdateTokenUsed(tokenRecord.ID)
+
+	// 调用 Puter 图片生成
+	respBytes, err := h.puterClient.CallImageGeneration(req.Prompt, req.Model, tokenRecord.Token)
+	if err != nil {
+		log.Error().Str("api", "ImageGen").Err(err).Msg("图片生成失败")
+		c.JSON(500, gin.H{"error": gin.H{"message": err.Error(), "type": "api_error"}})
+		return
+	}
+
+	// Puter 返回的可能是图片二进制数据或 JSON
+	// 尝试解析为 JSON
+	var puterResp map[string]any
+	if err := json.Unmarshal(respBytes, &puterResp); err == nil {
+		// JSON 响应，可能包含 url 或 base64
+		if url, ok := puterResp["url"].(string); ok {
+			c.JSON(200, gin.H{
+				"created": time.Now().Unix(),
+				"data": []gin.H{
+					{"url": url},
+				},
+			})
+			elapsed := time.Since(startTime).Seconds()
+			log.Info().Str("api", "ImageGen").Str("耗时", fmt.Sprintf("%.2fs", elapsed)).Msg("完成")
+			return
+		}
+		if b64, ok := puterResp["b64_json"].(string); ok {
+			c.JSON(200, gin.H{
+				"created": time.Now().Unix(),
+				"data": []gin.H{
+					{"b64_json": b64},
+				},
+			})
+			elapsed := time.Since(startTime).Seconds()
+			log.Info().Str("api", "ImageGen").Str("耗时", fmt.Sprintf("%.2fs", elapsed)).Msg("完成")
+			return
+		}
+	}
+
+	// 二进制图片数据 -> base64
+	b64 := base64.StdEncoding.EncodeToString(respBytes)
+	c.JSON(200, gin.H{
+		"created": time.Now().Unix(),
+		"data": []gin.H{
+			{"b64_json": b64},
+		},
+	})
+
+	elapsed := time.Since(startTime).Seconds()
+	log.Info().Str("api", "ImageGen").Str("耗时", fmt.Sprintf("%.2fs", elapsed)).Msg("完成")
+}
+
+// HandleVideoGeneration 处理 /v1/videos/generations 请求
+func (h *Handler) HandleVideoGeneration(c *gin.Context) {
+	startTime := time.Now()
+
+	var req struct {
+		Model  string `json:"model"`
+		Prompt string `json:"prompt"`
+		Width  int    `json:"width"`
+		Height int    `json:"height"`
+		FPS    int    `json:"fps"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"message": err.Error(), "type": "invalid_request_error"}})
+		return
+	}
+	if req.Prompt == "" {
+		c.JSON(400, gin.H{"error": gin.H{"message": "prompt is required", "type": "invalid_request_error"}})
+		return
+	}
+	if req.Model == "" {
+		req.Model = "togetherai:minimax/hailuo-02"
+	}
+
+	log.Info().Str("api", "VideoGen").Str("model", req.Model).Str("prompt", req.Prompt).Msg("收到请求")
+
+	// 获取 Token
+	tokenRecord, err := h.store.GetActiveToken()
+	if err != nil || tokenRecord == nil {
+		c.JSON(500, gin.H{"error": gin.H{"message": "no active token", "type": "api_error"}})
+		return
+	}
+	h.store.UpdateTokenUsed(tokenRecord.ID)
+
+	// 调用 Puter 视频生成
+	respBytes, err := h.puterClient.CallVideoGeneration(req.Prompt, req.Model, tokenRecord.Token, req.Width, req.Height, req.FPS)
+	if err != nil {
+		log.Error().Str("api", "VideoGen").Err(err).Msg("视频生成失败")
+		c.JSON(500, gin.H{"error": gin.H{"message": err.Error(), "type": "api_error"}})
+		return
+	}
+
+	// 尝试解析为 JSON（可能含 video_url 等）
+	var puterResp map[string]any
+	if err := json.Unmarshal(respBytes, &puterResp); err == nil {
+		// 返回 Puter 的原始 JSON 响应，包装为统一格式
+		c.JSON(200, gin.H{
+			"created": time.Now().Unix(),
+			"data":    puterResp,
+		})
+	} else {
+		// 二进制视频数据，返回 base64
+		b64 := base64.StdEncoding.EncodeToString(respBytes)
+		c.JSON(200, gin.H{
+			"created": time.Now().Unix(),
+			"data": gin.H{
+				"b64_video": b64,
+			},
+		})
+	}
+
+	elapsed := time.Since(startTime).Seconds()
+	log.Info().Str("api", "VideoGen").Str("耗时", fmt.Sprintf("%.2fs", elapsed)).Msg("完成")
 }

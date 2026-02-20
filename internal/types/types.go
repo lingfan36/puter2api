@@ -6,6 +6,7 @@ import "encoding/json"
 
 // ClaudeRequest Claude API 请求结构
 type ClaudeRequest struct {
+	Model     string          `json:"model,omitempty"`
 	MaxTokens int             `json:"max_tokens"`
 	Messages  []ClaudeMessage `json:"messages"`
 	Stream    bool            `json:"stream"`
